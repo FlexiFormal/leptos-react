@@ -23,7 +23,7 @@ macro_rules! fun {
         pub struct $name< $( $($arg: Into<JsValue>),* , )? R:JsRet > {
             js: SendWrapper<Function>,
             #[allow(unused_parens)]
-            __phantom:PhantomData<( $( $($arg),* , )? R )>
+            __phantom:PhantomData<SendWrapper<( $( $($arg),* , )? R )>>
         }
         impl< $( $($arg: Into<JsValue>),* , )? R:JsRet > $name< $( $($arg),* , )? R  > {
             pub fn apply(&self $(, $($aname:$arg),* )?  ) -> Result<R, CallbackError<R::Error>> {

@@ -20,7 +20,7 @@ macro_rules! wrapper {
     ($tp:ident$(<$($a:ident: $atp:ident),*>)? @ $trt:ident = $js:ident) => {
         pub type $tp$( < $($atp),* > )? = $js< $($($atp),* ,)? Option<LeptosContinuation> >;
         impl$(< $($atp:Into<JsValue>),*  >)? $tp$(< $($atp),*  >)? {
-            pub fn wrap<T:IntoView>(&self, $( $($a:$atp),* ,)? children:T) -> impl IntoView {
+            pub fn wrap<T:IntoView,F:FnOnce() -> T>(&self, $( $($a:$atp),* ,)? children:F) -> impl IntoView + use<T,F $(, $($atp),*)?> {
                 use leptos::either::Either::{Left, Right};
                 match self.apply($($($a),*)?) {
                     Ok(Some(cont)) => {
@@ -33,12 +33,31 @@ macro_rules! wrapper {
                                 tracing::error!("Error calling continuation: {err}");
                             }
                         });
-                        Left(view! {<div node_ref=rf>{children}</div>})
+                        Left(view! {<div node_ref=rf>{children()}</div>})
                     }
-                    Ok(None) => Right(children),
+                    Ok(None) => Right(children()),
                     Err(e) => {
                         tracing::error!("Error calling continuation: {e}");
-                        Right(children)
+                        Right(children())
+                    }
+                }
+            }
+            pub fn insert(&self, $( $($a:$atp),* )? ) -> impl IntoView + use<$( $($atp),*)?> {
+                match self.apply($($($a),*)?) {
+                    Ok(None) => None,
+                    Err(e) => {
+                        tracing::error!("Error calling insertion callback: {e}");
+                        None
+                    }
+                    Ok(Some(cont)) => {
+                        let ret = NodeRef::new();
+                        let owner = Owner::current().expect("Not in a leptos reactive context!").into();
+                        ret.on_load(move |e| {
+                            if let Err(e) = cont.apply(e, owner) {
+                                tracing::error!("Error calling continuation: {e}");
+                            }
+                        });
+                        Some(view!(<div node_ref = ret/>))
                     }
                 }
             }
