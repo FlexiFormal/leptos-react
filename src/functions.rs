@@ -4,7 +4,7 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen::{JsValue, convert::TryFromJsValue};
 use web_sys::js_sys::Function;
 
-use crate::utils::JsDisplay;
+use ftml_js_utils::JsDisplay;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CallbackError<E> {
@@ -21,7 +21,7 @@ pub struct NotAJsFunction(JsDisplay);
 macro_rules! fun {
     ( $name:ident:$tp:ident$(<$( $aname:ident = $arg:ident),+>)? = $f:ident) => {
         pub struct $name< $( $($arg: Into<JsValue>),* , )? R:JsRet > {
-            js: SendWrapper<Function>,
+            js: ::send_wrapper::SendWrapper<::leptos::web_sys::js_sys::Function>,
             #[allow(unused_parens)]
             __phantom:PhantomData<SendWrapper<( $( $($arg),* , )? R )>>
         }
@@ -72,21 +72,6 @@ macro_rules! fun {
                 })
             }
         }
-        /*
-        impl< $( $($arg: Into<JsValue>),* , )? R:JsRet > TryFromJsValue for Option<$name< $( $($arg),* , )? R >> {
-            type Error = NotAJsFunction;
-            fn try_from_js_value(value: JsValue) -> Result<Self, Self::Error> {
-                if value.is
-                if !value.is_function() {
-                    return Err(NotAJsFunction(JsDisplay(value)));
-                }
-                Ok(Self {
-                    js: SendWrapper::new(web_sys::js_sys::Function::from(value)),
-                    __phantom: PhantomData,
-                })
-            }
-        }
-        */
         impl< $( $($arg: Into<JsValue>),* , )? R:JsRet > wasm_bindgen::convert::FromWasmAbi for $name< $( $($arg),* , )? R > {
             type Abi = u32;
             unsafe fn from_abi(js: Self::Abi) -> Self {
